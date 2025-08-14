@@ -1,4 +1,3 @@
-// src/lib/api.js
 const API_BASE = "https://chat.grer.tes.co";
 
 // POST /api/masking (multipart/form-data)

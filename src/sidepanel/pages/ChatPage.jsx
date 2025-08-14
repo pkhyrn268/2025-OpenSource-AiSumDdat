@@ -2,6 +2,8 @@ import React from "react";
 import styled from "styled-components";
 import profileIcon from "../../assets/aiChat.svg";
 import sendIcon from "../../assets/send.svg";
+import MaskedViewer from "../components/MaskedViewer.jsx";
+
 
 export default function ChatPage({
   input = "",
@@ -20,9 +22,17 @@ export default function ChatPage({
           messages.map((m, i) => (
             <MessageRow key={i} isUser={m.role === "user"}>
               {m.role === "bot" && <ProfileImg src={profileIcon} alt="AI" />}
-              <MessageBubble isUser={m.role === "user"} small={m.small}>
-                {m.text}
+             {m.type === "maskedView" ? (
+               <MaskedViewer
+                 masked={m.masked}
+                 entities={m.entities}
+                 title="마스킹 결과"
+               />
+             ) : (
+               <MessageBubble isUser={m.role === "user"} small={m.small}>
+                 {m.text}
               </MessageBubble>
+             )}
             </MessageRow>
           ))}
         {error && <ErrorText>⚠ {error}</ErrorText>}

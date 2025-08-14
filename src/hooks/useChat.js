@@ -1,9 +1,9 @@
 // src/hooks/useChat.js
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { uploadMasking } from "../lib/api.js";
 import { loadSaved, saveAll } from "../lib/storage.js";
 
-// ✅ 새 멘트 & 질문
+// 새 멘트 & 질문
 const INTRO = [
   "안녕하세요! \n\nAI에게 더 정확한 답변을 얻을 수 있도록 최적의 프롬프트를 함께 만들어 드리는 AI 프롬프트 도우미입니다.",
   "몇 가지 질문에 답해 주시면,\n AI의 답변 퀄리티를 높이고 개인정보 유출을 방지하는 완성된 프롬프트를 만들어 드려요.\n\n자, 그럼 시작해 볼까요? ✨",
@@ -50,7 +50,6 @@ export default function useChat() {
       setMessages(prev => [
         ...prev,
         { role: "bot", text: `【질문 1】 ${QUESTIONS[0]}`, _askedFirst: true },
-        // 질문 6의 “작은 글씨” 안내는 실제 작은 글씨로 표기
       ]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,7 +71,6 @@ export default function useChat() {
       setStep(next);
 
       const nextMsg = { role: "bot", text: `【질문 ${next + 1}】 ${QUESTIONS[next]}` };
-      // 질문 6에는 작은 글씨 안내 추가
       const smallNote = (next === 5)
         ? { role: "bot", text: "※ 파일은 PDF 권장, 없으면 텍스트로 입력하셔도 좋습니다.", small: true }
         : null;
@@ -91,25 +89,35 @@ export default function useChat() {
       ]);
 
       const data = await uploadMasking(answers, pdfFile);
-      const { original_prompt = "", masked_prompt = "", masked_entities = [] } = data || {};
+      const { masked_prompt = "", masked_entities = [] } = data || {};
 
+      // 마스킹 뷰어 형태로 한 번에 출력
       setMessages(prev => [
         ...prev,
         { role: "bot", text: "마스킹 처리가 완료되었습니다." },
-        { role: "bot", text: `원본 프롬프트\n${original_prompt}` },
-        { role: "bot", text: `마스킹 프롬프트\n${masked_prompt}` },
-        masked_entities?.length
-          ? { role: "bot",
-              text:
-                "마스킹된 엔티티 목록\n" +
-                masked_entities.map(e => `- ${e.entity} (${e.label})`).join("\n")
-            }
-          : { role: "bot", text: "마스킹된 엔티티가 감지되지 않았습니다." },
+        {
+          role: "bot",
+          type: "maskedView",
+          masked: masked_prompt,
+          entities: Array.isArray(masked_entities) ? masked_entities : [],
+        },
       ]);
     } catch (e) {
       console.error(e);
       setError(e?.message || "서버 연결 실패");
-      setMessages(prev => [...prev, { role: "bot", text: "처리 중 오류가 발생했습니다." }]);
+
+      // 데모/디폴트 응답: API 실패 시에도 뷰어를 보여줌 -> 개발 후 없애도 좋음
+      const demoMasked = "저는 [NAME]이고 연락처는 [PHONE] 입니다. 이메일은 [EMAIL]을 사용합니다.";
+      const demoEntities = [
+        { entity: "김민수", label: "NAME" },
+        { entity: "010-1234-5678", label: "PHONE" },
+        { entity: "minsu@example.com", label: "EMAIL" },
+      ];
+      setMessages(prev => [
+        ...prev,
+        { role: "bot", text: "데모 데이터로 마스킹 결과를 표시합니다." },
+        { role: "bot", type: "maskedView", masked: demoMasked, entities: demoEntities },
+      ]);
     } finally {
       setLoading(false);
       // 다음 대화를 위해 초기화
