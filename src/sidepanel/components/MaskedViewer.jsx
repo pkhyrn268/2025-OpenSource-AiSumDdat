@@ -70,7 +70,7 @@ export default function MaskedViewer({ masked = "", entities = [], title = "마�
     <Wrap>
       <Toolbar>
         <Title>{title}</Title>
-        <CopyBtn onClick={copyNow}>📋 복사</CopyBtn>
+        <CopyBtn onClick={copyNow}>복사</CopyBtn>
       </Toolbar>
 
       <Body>
@@ -96,7 +96,7 @@ export default function MaskedViewer({ masked = "", entities = [], title = "마�
 
 /* ---------- styles ---------- */
 const Wrap = styled.div`
-  background: #f7fbff;
+  background: #BBB8E6B5;
   border: 1px solid #dbe7ff;
   border-radius: 12px;
   padding: 10px 10px 12px;
@@ -105,20 +105,29 @@ const Wrap = styled.div`
 
 const Toolbar = styled.div`
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 `;
 
 const Title = styled.div`
-  font-size: 13px; color: #5b6b8a; font-weight: 600;
+  font-size: 12px; 
+  color: #6b7280; 
+  font-weight: 400;
 `;
 
 const CopyBtn = styled.button`
-  border: 1px solid #cddcff;
-  background: #eef4ff;
-  color: #2f5ecb;
-  border-radius: 8px; padding: 6px 10px; font-size: 13px;
+  border: 0.3px solid #6b7280; 
+  background: transparent;
+  color: #6b7280;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 400;
   cursor: pointer;
-  &:hover { background: #e3ecff; }
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: rgba(107, 114, 128, 0.05); /* hover 시 살짝만 배경 */
+  }
 `;
 
 const Body = styled.div`
@@ -128,12 +137,16 @@ const Body = styled.div`
 
 const Mark = styled.button`
   display: inline;
-  padding: 0 2px;
+  padding: 0 3px;
   margin: 0 1px;
   border: none;
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
-  background: ${({ revealed }) => (revealed ? "#fff59d" : "#ffeb3b")};
-  box-shadow: inset 0 -8px 0 rgba(255,235,59,0.6);
-  color: #0f172a;
+  font-weight: 500;
+  background: ${({ revealed }) => (revealed ? "#b39ddb" : "#ede7f6")};
+  color: #1a1a2e;
+  transition: background 0.2s;
+  &:hover {
+    background: ${({ revealed }) => (revealed ? "#c5b3e6" : "#b39ddb")};
+  }
 `;

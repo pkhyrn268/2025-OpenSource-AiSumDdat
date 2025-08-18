@@ -49,7 +49,7 @@ export default function useChat() {
     if (!messages.some(m => m._askedFirst)) {
       setMessages(prev => [
         ...prev,
-        { role: "bot", text: `【질문 1】 ${QUESTIONS[0]}`, _askedFirst: true },
+        { role: "bot", text: `${QUESTIONS[0]}`, _askedFirst: true },
       ]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,7 +70,7 @@ export default function useChat() {
       const next = step + 1;
       setStep(next);
 
-      const nextMsg = { role: "bot", text: `【질문 ${next + 1}】 ${QUESTIONS[next]}` };
+      const nextMsg = { role: "bot", text: `${QUESTIONS[next]}` };
       const smallNote = (next === 5)
         ? { role: "bot", text: "※ 파일은 PDF 권장, 없으면 텍스트로 입력하셔도 좋습니다.", small: true }
         : null;
@@ -85,7 +85,7 @@ export default function useChat() {
       setError("");
       setMessages(prev => [
         ...prev,
-        { role: "bot", text: "마스킹 처리를 진행 중입니다… (잠시만 기다려주세요)" },
+        { role: "bot", text: "마스킹 처리를 진행 중입니다. \n 잠시만 기다려주세요!" },
       ]);
 
       const data = await uploadMasking(answers, pdfFile);
@@ -125,7 +125,7 @@ export default function useChat() {
       setPdfFile(null);
       setMessages(prev => [
         ...prev,
-        { role: "bot", text: `【질문 1】 ${QUESTIONS[0]}` },
+        { role: "bot", text: `${QUESTIONS[0]}` },
       ]);
     }
   };

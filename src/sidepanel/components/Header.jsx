@@ -1,11 +1,19 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import menuIcon from "../../assets/menu.svg";
-import notificationIcon from "../../assets/bell.png";   // png 사용
-import logoImage from "../../assets/logoImage.png";     // png 사용
-import logoText from "../../assets/logoText.svg";       // 텍스트 로고
 
-export default function Header({ onNavigate }) {
+import menuIcon from "../../assets/menu.svg";
+import notificationIcon from "../../assets/bell.png";   
+import logoImage from "../../assets/logoImage.png";     
+import logoText from "../../assets/logoText.svg";       
+
+import trashIcon from "../../assets/trash.png";
+import infoIcon from "../../assets/info.png";
+import compareIcon from "../../assets/compare.png";
+import bookmarkIcon from "../../assets/bookmark.png";
+import copyIcon from "../../assets/copy.png";
+import searchIcon from "../../assets/search.png";
+
+export default function Header({ onNavigate, activePage }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   return (
@@ -32,6 +40,7 @@ export default function Header({ onNavigate }) {
           onNavigate(page);
           setIsDrawerOpen(false);
         }}
+        activePage={activePage}
       />
     </>
   );
@@ -39,7 +48,7 @@ export default function Header({ onNavigate }) {
 
 /* ---------------- Drawer ---------------- */
 
-function MenuDrawer({ open, onClose, onNavigate }) {
+function MenuDrawer({ open, onClose, onNavigate, activePage }) {
   return (
     <DrawerContainer className={open ? "open" : ""} role="dialog" aria-label="사이드 메뉴">
       <DrawerHeader>
@@ -50,40 +59,39 @@ function MenuDrawer({ open, onClose, onNavigate }) {
       <DividerLine />
 
       <DrawerNav>
-        {/* 모양만, 클릭 비활성 */}
         <DrawerItem disabled>
-          <Emoji aria-hidden>📄</Emoji>
+          <IconImg src={copyIcon} alt="AI 채팅 기록" />
           <Label>AI 채팅 기록</Label>
         </DrawerItem>
 
         <DrawerItem disabled>
-          <Emoji aria-hidden>🔍</Emoji>
+          <IconImg src={searchIcon} alt="AI 채팅 검색" />
           <Label>AI 채팅 검색</Label>
         </DrawerItem>
 
-        <DrawerItem disabled accent>
-          <Emoji aria-hidden>✍️</Emoji>
+        <DrawerItem
+          onClick={() => onNavigate("chat")}
+          active={activePage === "chat"}
+        >
+          <IconImg src={compareIcon} alt="프롬프트 생성하기" />
           <Label>프롬프트 생성하기</Label>
         </DrawerItem>
 
-        {/* 저장된 프롬프트만 동작 */}
-        <DrawerItem onClick={() => onNavigate("saved")}>
-          <Emoji aria-hidden>⭐</Emoji>
+        <DrawerItem
+          onClick={() => onNavigate("saved")}
+          active={activePage === "saved"}
+        >
+          <IconImg src={bookmarkIcon} alt="저장한 프롬프트" />
           <Label>저장한 프롬프트</Label>
         </DrawerItem>
 
         <DrawerItem disabled>
-          <Emoji aria-hidden>🤝</Emoji>
-          <Label>프롬프트 공유하기</Label>
-        </DrawerItem>
-
-        <DrawerItem disabled>
-          <Emoji aria-hidden>ℹ️</Emoji>
+          <IconImg src={infoIcon} alt="도움말" />
           <Label>도움말</Label>
         </DrawerItem>
 
         <DrawerItem disabled>
-          <Emoji aria-hidden>🗑️</Emoji>
+          <IconImg src={trashIcon} alt="휴지통" />
           <Label>휴지통</Label>
         </DrawerItem>
       </DrawerNav>
@@ -101,7 +109,6 @@ const HeaderContainer = styled.header`
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  /* 디자인처럼 그림자 강화 */
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
 `;
 
@@ -118,6 +125,7 @@ const IconsWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-right: 30px;
 `;
 
 const IconButton = styled.button`
@@ -135,7 +143,6 @@ const DrawerContainer = styled.aside`
   right: -280px;
   width: 280px;
   height: 100%;
-  /* 디자인 네이비 톤 */
   background: linear-gradient(180deg, #12315a 0%, #14365f 40%, #0e2b52 100%);
   color: #e7eefc;
   box-shadow: -12px 0 28px rgba(0, 0, 0, 0.35);
@@ -156,7 +163,7 @@ const DrawerHeader = styled.div`
 const DrawerTitle = styled.h2`
   font-size: 18px;
   margin: 0;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: .2px;
   color: #f0f5ff;
   opacity: .95;
@@ -192,26 +199,24 @@ const DrawerItem = styled.button.attrs(p => ({
   padding: 10px 12px;
   border: none;
   background: transparent;
-  color: ${({ disabled }) => (disabled ? "rgba(231,238,252,.75)" : "#ffffff")};
-  cursor: ${({ disabled }) => (disabled ? "default" : "pointer")};
   border-radius: 12px;
   text-align: left;
 
-  ${({ accent }) => accent && `
-    color: #bcd4ff;
-  `}
+  /* 색상 규칙: 기본 흰색, active면 파랑 */
+  color: ${({ active }) => (active ? "#4a90e2" : "#ffffff")};
+
+  cursor: ${({ disabled }) => (disabled ? "default" : "pointer")};
 
   &:not(:disabled):hover {
     background: rgba(255,255,255,.07);
   }
 `;
 
-const Emoji = styled.span`
+
+const IconImg = styled.img`
   width: 22px;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 18px;
+  height: 22px;
+  flex-shrink: 0;
 `;
 
 const Label = styled.span`
