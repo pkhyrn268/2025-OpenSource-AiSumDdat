@@ -43,14 +43,20 @@
 
    * 단순히 정규표현식(regex)으로만 탐지하지 않고, **KoELECTRA 기반 NER 모델**을 함께 활용하여 다양한 개인정보(이름, 계좌번호, 연락처 등)를 정밀하게 식별합니다.
    * 특히 이 프로젝트는 **탐지 과정 자체에서도 개인정보가 외부로 유출되지 않도록 전처리 단계에서 AI를 활용**합니다. 즉, LLM에게 그대로 노출되기 전에 선제적으로 보호막을 형성하는 구조라 기존 보안 도구와 차별화됩니다.
-   * *\[Demo GIF 자리]*
+   * 
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/159b7086-37da-46e8-82d4-751ed3482b04" alt="탐지 예시 이미지" width="80%" />
+</div>
 
 2. 🛡️ **문맥 기반 마스킹 (Randomized Masking)**
 
    * 개인정보를 단순히 `***` 같은 심볼로 치환하는 것이 아니라, **생성형 AI가 이해하기 쉬운 유사 맥락의 대체 값**으로 치환합니다.
    * 예: `국민은행` → `신한은행` (은행명 유지) / `홍길동` → `김철수` (사람 이름 유지)
    * 이렇게 하면 AI 모델이 프롬프트를 처리할 때 의미 손실을 최소화하면서도 실제 개인정보는 안전하게 보호됩니다.
-   * *\[Demo GIF 자리]*
+     
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/54d37d1e-d829-450e-a1df-00738bbcbbf2" alt="마스킹 예시 이미지" width="80%" />
+</div>
 
 3. 👆 **사용자 선택적 원문 확인 및 보호 강도 조절**
 
@@ -59,20 +65,22 @@
 
      * 예: 모든 개인정보 마스킹 / 이름만 표시 / 계좌번호 일부만 마스킹 등
    * 이를 통해 **보안성과 편의성 사이의 균형**을 사용자가 직접 선택할 수 있습니다.
-   * *\[Demo GIF 자리]*
+  
 
 4. 🧩 **사용자 맞춤 템플릿 제공**
 
    * 자주 쓰이는 입력 형태(예: 이력서 첨삭, 메일 작성, 요약 요청 등)를 **템플릿으로 제공**하여 사용자가 안전하게 프롬프트를 작성할 수 있습니다.
    * 사용자는 목적에 맞는 템플릿을 선택하고, 개인정보 마스킹이 자동 적용된 프롬프트를 바로 활용할 수 있습니다.
-   * *\[Demo GIF 자리]*
+
+
+https://github.com/user-attachments/assets/4a67faba-d1ad-4346-ab66-3cfa3aba74c1
+
 
 5. 🌐 **크롬 확장 프로그램 지원**
 
    * 별도의 프로그램 설치 없이, **웹 브라우저 환경에서 곧바로 마스킹 기능을 적용**할 수 있습니다.
    * ChatGPT, Claude, Gemini 등 웹 기반 LLM 서비스에 바로 연결 가능하여 **실사용자 친화적인 접근성**을 보장합니다.
    * 또한 오픈소스 프로젝트로 확장성이 뛰어나, 누구나 기여하고 개선할 수 있는 구조입니다.
-   * *\[Demo GIF 자리]*
 
 6. 🧠 **개인정보 없이도 사용 이력 저장 가능**
 
@@ -81,13 +89,15 @@
 
 ---
 
-## 🖥️ 아키텍처
+## 🖥️ Architecture
 
+<div align="center">
 <img width="562" height="371" alt="image" src="https://github.com/user-attachments/assets/a933b745-ed30-4a6b-8df8-3cc7de972132" />
+</div>
 
 ---
 
-## ⚡ 기술 스택
+## ⚡ Skills
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square\&logo=python\&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square\&logo=pytorch\&logoColor=white)
@@ -101,7 +111,7 @@
 
 ---
 
-## 🎯 커밋 & 협업 규칙
+## 🎯 Repository Guide
 
 * **브랜치 전략**
 
@@ -124,14 +134,8 @@
 
 ---
 
-## 📌 라이선스
+## 📌 License
 
 MIT License
 
 
-
-```md
-이름&nbsp;&nbsp;역할
-```
-
-원하는 위치에 맞춰 적용해드릴 수 있어.
