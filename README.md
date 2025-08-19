@@ -3,6 +3,9 @@
 
 <2025 오픈소스 개발자대회 참가작 / 개인정보 보호 오픈소스 프로젝트>
 
+<img width="1920" height="872" alt="image" src="https://github.com/user-attachments/assets/3201d7b5-88fc-4586-9ad9-a4bd4bc04cde" />
+
+
 ---
 
 ## 👋 Team Introduce
