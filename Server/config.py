@@ -15,7 +15,7 @@ def _getenv_bool(key: str, default: bool) -> bool:
 class AppConfig:
     """애플리케이션 전역 설정 값."""
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
-    port: int = int(os.getenv("PORT", "8080"))
+    port: int = int(os.getenv("PORT", "9814"))
     default_locale: str = os.getenv("DEFAULT_LOCALE", "ko")
     app_version: str = os.getenv("APP_VERSION", "0.1.0")
     text_model_path: str = os.getenv(
