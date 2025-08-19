@@ -8,21 +8,25 @@ export default function App() {
   const {
     page, setPage,
     input, setInput, messages, loading, error, onSend,
-    savedList, deleteSaved, fillFromSaved
+    pdfFile, setPdfFile,
+    savedList, deleteSaved, fillFromSaved,
+    isFinished, startNewChat,   
   } = useChat();
 
   return (
     <div className="shell">
-      <Header onNavigate={(dest) => setPage(dest)} />
+      <Header
+        onNavigate={(dest) => setPage(dest)}
+        activePage={page}
+        onNewChat={startNewChat}   
+      />
 
       {page === "chat" && (
         <ChatPage
-          input={input}
-          setInput={setInput}
-          messages={messages}
-          error={error}
-          loading={loading}
-          onSend={onSend}
+          input={input} setInput={setInput}
+          messages={messages} error={error} loading={loading} onSend={onSend}
+          pdfFile={pdfFile} setPdfFile={setPdfFile}
+          isFinished={isFinished} startNewChat={startNewChat}
         />
       )}
 
