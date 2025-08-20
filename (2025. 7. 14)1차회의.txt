@@ -1,0 +1,43 @@
+📝 회의 내용
+
+주제
+
+- 회의록 정리
+    
+    https://caret.so/ko
+    
+- 노콜노죄(?) 전화 대신 받아주기
+    
+    
+- ai 이용 시 개인정보 필터링
+    
+    입력 → 필터링 → llm모델에 내 질문
+    
+    ### **"프롬프트 리스크 감지기" – 민감정보 유출 방지용 LLM 프록시**
+    
+    > 사용자가 LLM에 입력하는 프롬프트를 중간에서 감시 + 필터링
+    > 
+    > 
+    > → 개인키, 이메일, 토큰, 개인정보 등 포함 여부를 사전 탐지하고 경고
+    > 
+    - GPT Plugin, VSCode AI 확장, Web UI 등 중간단에 설치 가능
+    
+    - 참고자료
+        
+        https://chromewebstore.google.com/detail/ai-prompt-enhancer/kofojdlckbdkldgcbbcnbfaojobpijbh?pli=1
+        
+        https://www.nightfall.ai/blog/prompt-sanitization-5-steps-for-protecting-data-privacy-in-ai-apps
+        
+        https://github.com/fboerncke/private-prompts-prototype
+        
+        https://www.promptimizeai.com/
+        
+
+LLM 프롬프트 필터
+
+1. 크롬 확장 프로그램 형식으로 제작
+    1. 옆에 작은 창을 띄워서 프롬프트 입력하면, 추천 프롬프트와 문제가 될 수 있는 부분 출력 → 직접 GPT에 입력(or 직접 API 연결해서 자동으로 필터링 후 대답 출력)
+2. 기능 1(주)  : 민감 정보 필터링(개인정보) 
+3. 기능 2 :  자동으로 개선된 프롬포트 작성
+    1. 이미지 생성 시 이전 프롬프트에 영향을 받아 이상한 결과 출력 방지
+4. 기능 3(추가) :
