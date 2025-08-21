@@ -4,3 +4,5 @@ torch
 PyPDF2>=3.0.0
 presidio-analyzer>=2.2.355
 
+pytesseract
+pdf2image
