@@ -39,6 +39,9 @@ export default function Header({ onNavigate, activePage }) {
         onNavigate={(page) => {
           onNavigate(page);
           setIsDrawerOpen(false);
+           if (page === "chat") {
+            onNewChat();   
+          }
         }}
         activePage={activePage}
       />

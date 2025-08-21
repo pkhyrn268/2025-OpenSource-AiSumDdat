@@ -1,7 +1,6 @@
-// src/hooks/useChat.js
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { uploadMasking } from "../lib/api.js";
-import { loadSaved, saveAll } from "../lib/storage.js";
+import { useSavedStore } from "../stores/useSavedStore";
 
 // 새 멘트 & 질문
 const INTRO = [
@@ -21,14 +20,16 @@ const QUESTIONS = [
 export default function useChat() {
   const [page, setPage] = useState("chat");
 
-  // 채팅
+  // 채팅 상태
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
     { role: "bot", text: INTRO[0] },
     { role: "bot", text: INTRO[1] },
+    { role: "bot", text: QUESTIONS[0], _askedFirst: true },
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isFinished, setIsFinished] = useState(false);
 
   // 질문 단계/답변
   const [step, setStep] = useState(0);
@@ -40,73 +41,51 @@ export default function useChat() {
   // 파일
   const [pdfFile, setPdfFile] = useState(null);
 
-  // 저장
-  const [savedList, setSavedList] = useState([]);
-  useEffect(() => { loadSaved().then(setSavedList); }, []);
-
-  // 첫 질문 표시
-  useEffect(() => {
-    if (!messages.some(m => m._askedFirst)) {
-      setMessages(prev => [
-        ...prev,
-        { role: "bot", text: `${QUESTIONS[0]}`, _askedFirst: true },
-      ]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Zustand 저장소 사용
+  const { savedList, addSaved, deleteSaved } = useSavedStore();
 
   const onSend = async () => {
+    if (isFinished) return; // 끝났으면 입력 막기
     const text = input.trim();
     if (!text || loading) return;
 
-    // 사용자 답변 저장
+    // 사용자 답변 추가
     setMessages(prev => [...prev, { role: "user", text }]);
     const key = `question${step + 1}`;
     setAnswers(prev => ({ ...prev, [key]: text }));
     setInput("");
 
-    // 다음 질문 or 업로드
+    // 다음 질문
     if (step < QUESTIONS.length - 1) {
       const next = step + 1;
       setStep(next);
-
-      const nextMsg = { role: "bot", text: `${QUESTIONS[next]}` };
+      const nextMsg = { role: "bot", text: QUESTIONS[next] };
       const smallNote = (next === 5)
         ? { role: "bot", text: "※ 파일은 PDF 권장, 없으면 텍스트로 입력하셔도 좋습니다.", small: true }
         : null;
-
       setMessages(prev => smallNote ? [...prev, nextMsg, smallNote] : [...prev, nextMsg]);
       return;
     }
 
-    // 모든 답변 모였으면 업로드
+    // 마지막 단계: 업로드
     try {
       setLoading(true);
-      setError("");
-      setMessages(prev => [
-        ...prev,
-        { role: "bot", text: "마스킹 처리를 진행 중입니다. \n 잠시만 기다려주세요!" },
-      ]);
+      setMessages(prev => [...prev, { role: "bot", text: "마스킹 처리 중입니다..." }]);
 
       const data = await uploadMasking(answers, pdfFile);
       const { masked_prompt = "", masked_entities = [] } = data || {};
-
-      // 마스킹 뷰어 형태로 한 번에 출력
       setMessages(prev => [
         ...prev,
         { role: "bot", text: "마스킹 처리가 완료되었습니다." },
-        {
-          role: "bot",
-          type: "maskedView",
-          masked: masked_prompt,
-          entities: Array.isArray(masked_entities) ? masked_entities : [],
-        },
+        { role: "bot", type: "maskedView", masked: masked_prompt, entities: masked_entities },
       ]);
+
+      autoSaveConversation([...messages, { role: "user", text }]);
     } catch (e) {
       console.error(e);
       setError(e?.message || "서버 연결 실패");
 
-      // 데모/디폴트 응답: API 실패 시에도 뷰어를 보여줌 -> 개발 후 없애도 좋음
+      // 데모 응답
       const demoMasked = "저는 [NAME]이고 연락처는 [PHONE] 입니다. 이메일은 [EMAIL]을 사용합니다.";
       const demoEntities = [
         { entity: "김민수", label: "NAME" },
@@ -118,28 +97,48 @@ export default function useChat() {
         { role: "bot", text: "데모 데이터로 마스킹 결과를 표시합니다." },
         { role: "bot", type: "maskedView", masked: demoMasked, entities: demoEntities },
       ]);
+
+      autoSaveConversation([...messages, { role: "user", text }]);
     } finally {
       setLoading(false);
-      // 다음 대화를 위해 초기화
-      setStep(0);
-      setPdfFile(null);
-      setMessages(prev => [
-        ...prev,
-        { role: "bot", text: `${QUESTIONS[0]}` },
-      ]);
+      setIsFinished(true); // 성공/실패 상관없이 끝났으면 버튼 표시
     }
   };
 
-  const deleteSaved = async (id) => {
-    const next = savedList.filter(it => it.id !== id);
-    setSavedList(next); await saveAll(next);
+  // 자동 저장
+  const autoSaveConversation = (conv) => {
+    const newItem = {
+      id: Date.now(),
+      title: conv.find(m => m.role === "user")?.text?.slice(0, 20) || "새 프롬프트",
+      text: conv.map(m => `[${m.role}] ${m.text || m.masked || ""}`).join("\n"),
+      masked: conv.find(m => m.type === "maskedView")?.masked || "",
+      date: new Date().toLocaleString(),
+    };
+    addSaved(newItem);
   };
-  const fillFromSaved = (item) => { setPage("chat"); setInput(item.text || ""); };
+
+  // 새 채팅 시작
+  const startNewChat = () => {
+    setStep(0);
+    setAnswers({
+      question1: "", question2: "", question3: "",
+      question4: "", question5: "", question6: "",
+    });
+    setPdfFile(null);
+    setMessages([
+      { role: "bot", text: INTRO[0] },
+      { role: "bot", text: INTRO[1] },
+      { role: "bot", text: QUESTIONS[0], _askedFirst: true },
+    ]);
+    setIsFinished(false);
+  };
 
   return {
     page, setPage,
-    input, setInput, messages, loading, error, onSend,
+    input, setInput, messages, setMessages,
+    loading, error, onSend,
     pdfFile, setPdfFile,
-    savedList, deleteSaved, fillFromSaved,
+    savedList, deleteSaved,
+    isFinished, startNewChat,
   };
 }
