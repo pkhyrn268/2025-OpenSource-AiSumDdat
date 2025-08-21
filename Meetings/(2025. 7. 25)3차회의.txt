@@ -1,0 +1,24 @@
+### 📝 회의 내용
+
+https://www.figma.com/design/T23AIOZjTKszTx8dSeXmJ1/LLM?node-id=0-1&t=wp0kjeaU9jNbPYhf-1
+
+⇒ 기능명세서 보고 간단하게 와이어프레임 제작해봤습니다! 피드백 마음껏 남겨주신다면, 디자인할 때 참고하겠습니다 :)
+
+- 피드백(수빈)
+    
+    ![image.png](attachment:3982b8f9-7317-432a-bf0c-eb072cc01720:image.png)
+    
+    그리고 필터링되고 제안된 프롬프트를 복사할 수 있는 복사 버튼이 있으면 좋을 것 같습니다!
+    
+    예시 
+    
+    ![image.png](attachment:6db8992e-e634-40dc-98a5-3848cb0b17ab:image.png)
+    
+
+1. 프롬프트 카테고리 추가(금융이, 이력이,  등등)  → 말투도 다르게
+2. 챗봇 → 템플릿 선택 속에 
+3. 필터링 + 마스킹 알고리즘은 백엔드에서 담당
+4. API 호출하여 대답 추출 & 수정된 프롬프트만 제안하는 것까지 기능 둘다 
+5. pdf 문서 → 텍스트 
+    1. 알고리즘으로 구현 
+    2. https://maloveforme.tistory.com/m/241
