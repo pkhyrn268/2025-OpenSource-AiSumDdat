@@ -1,3 +1,4 @@
+// useChat.js
 import { useState } from "react";
 import { uploadMasking } from "../lib/api.js";
 import { useSavedStore } from "../stores/useSavedStore";
@@ -45,7 +46,7 @@ export default function useChat() {
   const { savedList, addSaved, deleteSaved } = useSavedStore();
 
   const onSend = async () => {
-    if (isFinished) return; // 끝났으면 입력 막기
+    if (isFinished) return;
     const text = input.trim();
     if (!text || loading) return;
 
@@ -73,14 +74,29 @@ export default function useChat() {
       setMessages(prev => [...prev, { role: "bot", text: "마스킹 처리 중입니다..." }]);
 
       const data = await uploadMasking(answers, pdfFile);
-      const { masked_prompt = "", masked_entities = [] } = data || {};
+      const {
+        original_prompt = "",
+        masked_prompt = "",
+        masked_entities = [],
+      } = data || {};
+
       setMessages(prev => [
         ...prev,
         { role: "bot", text: "마스킹 처리가 완료되었습니다." },
-        { role: "bot", type: "maskedView", masked: masked_prompt, entities: masked_entities },
+        {
+          role: "bot",
+          type: "maskedView",
+          masked: masked_prompt,
+          entities: masked_entities,
+          original: original_prompt,            // ✅ 핵심: 원문 전달
+        },
       ]);
 
-      autoSaveConversation([...messages, { role: "user", text }]);
+      autoSaveConversation([
+        ...messages,
+        { role: "user", text },
+        { role: "bot", type: "maskedView", masked: masked_prompt, original: original_prompt }
+      ]);
     } catch (e) {
       console.error(e);
       setError(e?.message || "서버 연결 실패");
@@ -95,13 +111,19 @@ export default function useChat() {
       setMessages(prev => [
         ...prev,
         { role: "bot", text: "데모 데이터로 마스킹 결과를 표시합니다." },
-        { role: "bot", type: "maskedView", masked: demoMasked, entities: demoEntities },
+        {
+          role: "bot",
+          type: "maskedView",
+          masked: demoMasked,
+          entities: demoEntities,
+          original: "", // 데모라 원문 없음
+        },
       ]);
 
       autoSaveConversation([...messages, { role: "user", text }]);
     } finally {
       setLoading(false);
-      setIsFinished(true); // 성공/실패 상관없이 끝났으면 버튼 표시
+      setIsFinished(true);
     }
   };
 
@@ -112,6 +134,7 @@ export default function useChat() {
       title: conv.find(m => m.role === "user")?.text?.slice(0, 20) || "새 프롬프트",
       text: conv.map(m => `[${m.role}] ${m.text || m.masked || ""}`).join("\n"),
       masked: conv.find(m => m.type === "maskedView")?.masked || "",
+      original: conv.find(m => m.type === "maskedView")?.original || "", // 선택: 기록에 원문 포함
       date: new Date().toLocaleString(),
     };
     addSaved(newItem);

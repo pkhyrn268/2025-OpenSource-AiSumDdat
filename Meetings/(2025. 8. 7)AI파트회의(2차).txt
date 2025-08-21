@@ -1,0 +1,292 @@
+| **분류** | **표기** | **정의** |
+| --- | --- | --- |
+| ARTIFACTS | AF | 사람에 의해 창조된 인공물로 문화재, 건물, 악기, 도로, 무기, 운송수단, 작품명, 공산품명이 모두 이에 해당 |
+| ANIMAL | AM | 사람을 제외한 짐승 |
+| CIVILIZATION | CV | 문명/문화 |
+| DATE | DT | 기간 및 계절, 시기/시대 |
+| EVENT | EV | 특정 사건/사고/행사 명칭 |
+| STUDY_FIELD | FD | 학문 분야, 학파 및 유파 |
+| LOCATION | LC | 지역/장소와 지형/지리 명칭 등을 모두 포함 |
+| MATERIAL | MT | 원소 및 금속, 암석/보석, 화학물질 |
+| ORGANIZATION | OG | 기관 및 단체 명칭 |
+| PERSON | PS | 인명 및 인물의 별칭 (유사 인물 명칭 포함) |
+| PLANT | PT | 꽃/나무, 육지식물, 해초류, 버섯류, 이끼류 |
+| QUANTITY | QT | 수량/분량, 순서/순차, 수사로 이루어진 표현 |
+| TIME | TI | 시계상으로 나타나는 시/시각, 시간 범위 |
+| TERM | TM | 타 개체명에서 정의된 세부 개체명 이외의 개체명 |
+| THEORY | TR | 특정 이론, 법칙 원리 등 |
+
+https://huggingface.co/Leo97/KoELECTRA-small-v3-modu-ner
+
+COPY2.py
+
+## 🔁 지금 해야 할 단계
+
+1. **모델이 감지한 엔터티를 네가 만든 태그로 변환**
+    
+    예: `PER` → `NAME`, `LOC` → `ADDR`, `DT` → `BIRTH` 처럼
+    
+2. **변환된 태그 리스트**를 `CustomNERRecognizer` 생성자에 넘겨줘야 Presidio에서 작동 가능
+3. 그래서 전체 흐름은:
+
+```
+plaintext
+코드 복사
+KoBERT 모델 → HuggingFaceNlpEngine → NlpArtifacts.entities
+→ CustomNERRecognizer.analyze() → RecognizerResult
+→ AnalyzerEngine.analyze(text) → 결과 출력 및 마스킹
+
+```
+
+## 모델 선정 후 NER로 개체명 인식 완료 후 마스킹 처리까지’
+
+```jsx
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+from presidio_analyzer import AnalyzerEngine, RecognizerResult, EntityRecognizer
+from presidio_analyzer.nlp_engine import NlpEngine, NlpArtifacts
+
+# 1. 커스텀 HuggingFace NLP 엔진
+class HuggingFaceNlpEngine(NlpEngine):
+    def __init__(self, model_name="Leo97/KoELECTRA-small-v3-modu-ner"):
+        self.last_results = []  # 🔸 여기에 결과 저장
+        self.language = "ko"
+
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = AutoModelForTokenClassification.from_pretrained(model_name, trust_remote_code=True)
+
+        self.pipeline = pipeline(
+            "ner",
+            model=model,
+            tokenizer=tokenizer,
+            aggregation_strategy="simple",
+            device=0,
+            #tokenizer_kwargs={"truncation": True, "max_length": 512}
+        )
+
+    def load(self):
+        pass
+
+    def is_loaded(self, language: str = "ko") -> bool:
+        return language == self.language
+
+    def process_text(self, text, language):
+        results = self.pipeline(text)
+        self.last_results = results
+
+        TAG_MAPPING = {
+            "PS": "PER",
+            "DT": "DAT",
+            "LC": "LOC",
+            "OG": "ORG",
+            "TI": "TIME",
+            "QT": "QUANTITY",
+            "FD": "FACILITY",
+            "TR": "TERM",
+            "CV": "CIVIL",
+            "AM": "ETC",  # 의미 없으면 ETC로
+        }
+        
+        
+        #print("\n📋 [NER 결과]")
+        #for res in results:
+        #    print(f"🔎 [엔터티: {res['entity_group']}] '{res['word']}' ({res['start']}~{res['end']}) | score: {res['score']:.2f}")
+
+        # 결과 구조: entity_group, word, start, end
+        tokens = [res["word"] for res in results]
+        entities = [(res["entity_group"], res["start"], res["end"]) for res in results]
+        tokens_indices = list(range(len(tokens)))
+
+        #print(results)  # 출력 확인용
+
+        
+        return NlpArtifacts(
+            tokens=tokens,
+            lemmas=tokens,
+            entities=entities,
+            tokens_indices=tokens_indices,
+            nlp_engine=self,
+            language=language
+        )
+
+    def process_batch(self, texts, language):
+        return [self.process_text(text, language) for text in texts]
+
+    def is_stopword(self, word, language):
+        return False
+
+    def is_punct(self, word: str, language: str) -> bool:
+        return word in '.,!?;:"()[]{}'
+
+    def get_supported_languages(self):
+        return ["ko"]
+
+    def get_supported_entities(self):
+        return ["PER", "ORG", "LOC", "DAT"]  # 실제 entity label에 맞게 수정 필요
+
+# 2. Custom Recognizer 정의
+class CustomNERRecognizer(EntityRecognizer):
+    def __init__(self, supported_entities=None, name="CustomNERRecognizer"):
+        self.supported_entities = supported_entities or ["PER", "ORG", "LOC", "DAT"]
+        self.name = name
+        super().__init__(supported_entities=self.supported_entities, name=name)
+
+    def load(self):
+        pass
+
+    def analyze(self, text, entities, nlp_artifacts):
+        results = []
+        for entity_group, start, end in nlp_artifacts.entities:
+            if entity_group in entities:
+                result = RecognizerResult(
+                    entity_type=entity_group,
+                    start=start,
+                    end=end,
+                    score=0.85,  # 모델 확신도 직접 사용하려면 수정 가능
+                    analysis_explanation=None,
+                    recognizer_name=self.name
+                )
+                results.append(result)
+        return results
+
+# 3. Presidio Analyzer 설정
+hf_engine = HuggingFaceNlpEngine("Leo97/KoELECTRA-small-v3-modu-ner")
+analyzer = AnalyzerEngine(nlp_engine=hf_engine, supported_languages=["ko"])
+
+# 기본 recognizer 제거
+analyzer.registry.remove_recognizer("SpacyRecognizer")
+
+# 커스텀 recognizer 등록
+custom_recognizer = CustomNERRecognizer()
+analyzer.registry.add_recognizer(custom_recognizer)
+
+import re
+text = "유호준는 서울에 거주하게 때문에 동국대학교에 왔다. 춘식이의 전화번호 010-1234-5678이야. 오늘은 날짜는 2025년 08월 07일이다. 꽃과 고양이는 귀엽다."
+
+# 분석 수행
+results = analyzer.analyze(text=text, language="ko")
+print("\n🔍 [탐지된 엔터티 원본 목록]")
+for res in hf_engine.last_results:
+    print(f"🔎 Entity: {res['entity_group']}, Text: '{res['word']}', Score: {res['score']:.2f}")
+
+# 엔터티 치환: 정규식으로 word 기반 교체 (겹치는 단어가 있을 수 있으니 순서 중요)
+masked_text = text
+used = set()  # 중복 치환 방지
+
+for res in sorted(hf_engine.last_results, key=lambda x: -len(x['word'])):
+    word = res["word"]
+    ent = res["entity_group"]
+
+    if word in used:
+        continue
+
+    # re.escape(word)로 정규식 안전하게 escape, 단어 단위가 아니라 substring 교체
+    pattern = re.escape(word)
+    placeholder = f"[{ent}]"
+
+    # 1회만 교체 (중복된 동일 단어 다 바뀌지 않게)
+    masked_text, count = re.subn(pattern, placeholder, masked_text, count=1)
+    if count > 0:
+        used.add(word)
+
+# 최종 출력
+print("\n✅ [최종 치환 결과]")
+print(masked_text)
+
+```
+
+원래 문장 :
+
+유호준는 서울에 거주하게 때문에 동국대학교에 왔다. 춘식이의 전화번호 010-1234-5678이야. 오늘은 날짜는 2025년 08월 07일이다. 꽃과 고양이는 귀엽다. 
+
+```jsx
+(presidio-py310) bm_ai@a0dd80db226b:~/oss_team3/presidio_custom/test$ python finaltest.py
+Device set to use cuda:0
+
+🔍 [탐지된 엔터티 원본 목록]
+🔎 Entity: PS, Text: '유호준', Score: 0.94
+🔎 Entity: LC, Text: '서울', Score: 0.97
+🔎 Entity: OG, Text: '동국대학교', Score: 0.93
+🔎 Entity: PS, Text: '춘식', Score: 0.88
+🔎 Entity: QT, Text: '010 - 1234 - 56', Score: 0.70
+🔎 Entity: DT, Text: '오늘', Score: 0.82
+🔎 Entity: DT, Text: '08월 07', Score: 0.53
+🔎 Entity: AM, Text: '꽃', Score: 0.67
+🔎 Entity: AM, Text: '고양이', Score: 0.73
+
+✅ [최종 치환 결과]
+[PS]는 [LC]에 거주하게 때문에 [OG]에 왔다. [PS]이의 전화번호 010-1234-5678이야. 
+[DT]은 날짜는 2025년 [DT]일이다. [AM]과 [AM]는 귀엽다.
+```
+
+## 다음 목표
+
+1. ~~PS, LC, OG, QT 등등 → 이름, 위치, 등등로 수정하기.~~
+2. 꽃, 동물 등등 → 마스킹 안되도록 수정하기.
+    
+    !! 모델이 개체명으로 인식하지 않도록 파인튜닝
+    
+    [학습데이터 예시.txt](attachment:b91e10e2-24e3-456d-9896-bef55a9f05db:학습데이터_예시.txt)
+    
+3. 전화번호, 연도(날짜), 계좌번호 마스킹되도록 수정하기. *[fine-tuning]*
+    1. 지금 전화번호, 계좌번호는 마스킹이 안되는 상황
+    2. 정규표현식으로 해야할 것 같기도.
+    - 숫자
+        - 전화번호
+        - 계좌번호
+    - 날짜
+        - 오늘을 [날짜]로 마스킹
+        - 2025년 08월 07일에서 08월만 [날짜]로 마스킹 됨
+4. 형식있는 숫자 나열 -계좌번호 주민번호 전화번호 카드번호 마스킹되도록 수정하기. *[fine-tuning]*
+5. 주제에 따른 마스킹 목록 정리(태깅 분류)
+6. 문구 대체는 안함. → 왜냐하면 무작위로 하면 문맥이 너무 달라짐.
+
+"유호준는 서울에 거주하게 때문에 동국대학교에 왔다. 호준이 집에는 춘식이 1명이 산다. 춘식이의 전화번호 010-1234-5678이고, 계좌번호는 11111111이야. 오늘은 날짜는 2025년 08월 07일이다. 꽃과 고양이는 귀엽다.”
+
+✅ [최종 치환 결과]
+
+[PS]는 [LC]에 거주하게 때문에 [OG]에 왔다. 호준이집에는 [PS]이 [QT]이 산다. 춘식이의 전화번호 010-1234-5678이고, 계좌번호는 11111111이야. [DT]은 날짜는 2025년 [DT] 07일이다. [AM]과 [AM]는 귀엽다.
+
+| 은행명 | 계좌번호 형식 예시 | 총 자리수 | 구분 형식 설명 |
+| --- | --- | --- | --- |
+| **국민은행 (KB)** | 123-456-789012 | 10~12자리 | 3-3-6 형태 또는 6-6 형태 |
+| **신한은행** | 110-123-456789 | 12자리 | 3-3-6 형태(110으로 시작) |
+| **우리은행** | 1002-123-456789 | 13자리 | 4-3-6 형태 (1002으로 시작) |
+| **하나은행** | 123-910123-45678 | 12~14자리 | 지점코드-계좌코드-일련번호 |
+| **농협 (NH)** | 302-1234-5678-91 | 13~16자리 | 3-4-4-2 형태 (개인 계좌) 또는 11자리 (단위농협) |
+| **기업은행 (IBK)** | 012-345678-90 | 11자리 | 3-6-2 형태 또는 3-3-5 형태(012로 시작) |
+| **케이뱅크** | 100-1234-5678-90 | 13자리 | 3-4-4-2 형태 |
+| **카카오뱅크** | 3333-12-3456789 | 12자리 | 4-2-7 형태 (항상 3333으로 시작) |
+| **토스뱅크** | 1000-1234-5678 | 12자리 | 4-4-4 형태 (항상 1000으로 시작) |
+| **우체국** | 700123-01-012345 | 13자리 | 6-2-6 형태 |
+| **SC제일은행** | 123-01-234567 | 10자리 | 3-2-6 형태 |
+| **씨티은행** | 123-45678-1234 | 10~12자리 | 다양한 형태 존재 |
+| **수협은행** | 201-123-456789 | 12자리 | 3-3-6 형태 |
+| **부산은행** | 101-123-456789 | 12자리 | 3-3-6 형태 |
+| **대구은행** | 508-123-456789 | 12자리 | 3-3-6 형태 |
+| **광주은행** | 034-123-456789 | 12자리 | 3-3-6 형태 |
+| **전북은행** | 520-123-456789 | 12자리 | 3-3-6 형태 |
+| **경남은행** | 207-123-456789 | 12자리 | 3-3-6 형태 |
+| **제주은행** | 064-123-456789 | 12자리 | 3-3-6 형태 |
+
+정규 표현식
+
+| 은행명 | 예시 | 계좌 패턴 설명 | 정규표현식 |
+| --- | --- | --- | --- |
+| **국민은행 (KB)** | 123-456-789012 | 10~12자리, 3-3-6 또는 6-6 | `\b\d{3}-\d{3}-\d{6}\b |
+| **신한은행** | 110-123-456789 | 3-3-6, 총 12자리 | `\b110-\d{3}-\d{6}\b` |
+| **우리은행** | 1002-123-456789 | 4-3-6, 항상 1002로 시작 | `\b1002-\d{3}-\d{6}\b` |
+| **하나은행** | 123-910123-45678 | 지점코드-계좌-일련번호 | `\b\d{3}-\d{6}-\d{5}\b` |
+| **농협중앙회** | 302-1234-5678-91 | 13~16자리, 3-4-4-2 | `\b302-\d{4}-\d{4}-\d{2}\b` |
+| **단위농협** | 351-12-123456 | 11자리, 3-2-6 | `\b351-\d{2}-\d{6}\b` |
+| **기업은행 (IBK)** | 012-345678-90 | 3-6-2 또는 3-3-5 | `\b\d{3}-\d{6}-\d{2}\b |
+| **케이뱅크** | 100-1234-5678-90 | 3-4-4-2 형태, 총 13자리 | `\b100-\d{4}-\d{4}-\d{2}\b` |
+| **카카오뱅크** | 3333-12-3456789 | 4-2-7 형태, 항상 3333으로 시작 | `\b3333-\d{2}-\d{7}\b` |
+| **토스뱅크** | 1000-1234-5678 | 4-4-4 형태, 1000으로 시작 | `\b1000-\d{4}-\d{4}\b` |
+| **우체국** | 700123-01-012345 | 6-2-6 형태 | `\b700\d{3}-\d{2}-\d{6}\b` |
+| **SC제일은행** | 123-01-234567 | 3-2-6 형태 | `\b\d{3}-\d{2}-\d{6}\b` |
+| **씨티은행** | 123-45678-1234 | 다양한, 일반적으로 3-5-4 | `\b\d{3}-\d{5}-\d{4}\b` |
+| **수협은행** | 201-123-456789 | 3-3-6 형태 | `\b201-\d{3}-\d{6}\b` |
+| **부산/경남/광주/전북은행 등** | 3-3-6 공통형태 | 지방은행은 대체로 동일한 형식 | `\b\d{3}-\d{3}-\d{6}\b` |
+|  |  |  |  |
+
+[백업](https://www.notion.so/248957a41faf801480a2c05791fb9edd?pvs=21)
