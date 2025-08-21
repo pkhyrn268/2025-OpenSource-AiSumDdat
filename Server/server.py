@@ -19,7 +19,7 @@ from flask import Flask, request
 try:  # package-relative import
     from .config import LOG_LEVEL, APP_PORT, APP_VERSION
     from .services.prompt_builder import build_prompt
-    # from .services.pdf_service import extract_text_from_pdf
+    from .services.pdf_service import extract_text_from_pdf
     from .services.masking_service import mask_text_with_models
     from .utils.responses import success, error
 except Exception:  # pragma: no cover - fallback for script execution
