@@ -19,7 +19,7 @@ from flask import Flask, request
 try:  # package-relative import
     from .config import LOG_LEVEL, APP_PORT, APP_VERSION
     from .services.prompt_builder import build_prompt
-    from .services.pdf_service import extract_text_from_pdf
+    # from .services.pdf_service import extract_text_from_pdf
     from .services.masking_service import mask_text_with_models
     from .utils.responses import success, error
 except Exception:  # pragma: no cover - fallback for script execution
@@ -95,8 +95,8 @@ def create_app() -> Flask:
             if not isinstance(prompt_data, dict):
                 return error("필수 입력이 누락되었습니다. form의 prompt_json 또는 JSON 본문을 사용하세요.", 400)
 
-            # 템플릿 답변으로부터 프롬프트 생성
-            original_prompt = build_prompt(prompt_data)
+            # 템플릿 답변으로부터 전체 프롬프트 생성
+            original_prompt_all = build_prompt(prompt_data)
 
             # (선택) PDF 첨부 처리
             if "pdf_file" in request.files and request.files["pdf_file"]:
@@ -106,20 +106,26 @@ def create_app() -> Flask:
                     pdf_text = extract_text_from_pdf(pdf_bytes)
                     if pdf_text:
                         # 구분자와 함께 PDF 본문을 프롬프트에 추가
-                        original_prompt = (
-                            f"{original_prompt}\n\n[PDF 내용]\n{pdf_text}"
+                        original_prompt_all = (
+                            f"{original_prompt_all}\n\n[PDF 내용]\n{pdf_text}"
                         )
                 except Exception as e:
                     logging.exception("PDF 파일 처리 중 오류")
                     return error("PDF 파일 처리 중 오류가 발생했습니다.", 500)
 
-            # 모델들을 활용해 프롬프트 텍스트를 마스킹
-            masked_prompt, masked_entities = mask_text_with_models(original_prompt)
+            # 반환은 question2의 내용만
+            q2_text = prompt_data.get("question2", "")
+            if not isinstance(q2_text, str):
+                q2_text = ""
+
+            # 모델들을 활용해 question2 텍스트만 마스킹
+            masked_prompt, masked_entities = mask_text_with_models(q2_text)
 
             return success(
                 "마스킹 처리가 완료되었습니다.",
                 {
-                    "original_prompt": original_prompt,
+                    # 반환은 question2만
+                    "original_prompt": q2_text,
                     "masked_prompt": masked_prompt,
                     "masked_entities": masked_entities,
                 },
