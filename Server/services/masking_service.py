@@ -19,7 +19,7 @@ def _mask_from_results(text: str, results: List[Dict]) -> Tuple[str, List[Dict]]
         code = to_standard_label(r["entity_type"]) or r["entity_type"]
         display = to_display_label(code, locale=DEFAULT_LOCALE)
         masked = masked[: r["start"]] + f"[{display}]" + masked[r["end"] :]
-        masked_entities.append({"entity": entity_text, "label": code, "display": display})
+        masked_entities.append({"entity": entity_text, "label": display})
 
     # 중복 제거(첫 등장 우선)
     seen = set()
