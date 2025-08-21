@@ -17,7 +17,7 @@ export default function ChatPage({
           <MessageRow key={i} isUser={m.role === "user"}>
             {m.role === "bot" && !m.small && <ProfileImg src={profileIcon} alt="AI" />}
             {m.type === "maskedView" ? (
-              <MaskedViewer masked={m.masked} entities={m.entities} title="마스킹 결과 프롬프트" />
+              <MaskedViewer masked={m.masked} entities={m.entities}  original={m.original} title="마스킹 결과 프롬프트" />
             ) : (
               <MessageBubble isUser={m.role === "user"} small={m.small}>{m.text}</MessageBubble>
             )}
